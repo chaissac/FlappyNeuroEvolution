@@ -2,21 +2,30 @@ class Bird {
   Float x, y, r, velocity, lift, fitness ;
   int score ;
   PVector vel;
-  Boolean alive = true ;
+  Boolean alive ;
   color c ;
   Float rate ;
+  String[] history ;
   NeuralNetwork brain;
 
   Bird() {
     init();
-    brain = new NeuralNetwork(8, 24, 2, "sigmoid");
+    c = color(random(256), random(256), random(256));
+    rate = .1 ;
+    history = new String[1];
+    history[0] = this.hashCode() + ","+c ;
+    brain = new NeuralNetwork(8, 16, 2, "sigmoid");
   }
   Bird(Bird papa) {
     init();
     if (random(1)<rate) r = papa.r+randomGaussian() ;
     brain = new NeuralNetwork(papa.brain);
-    brain.mutate(rate);
-    c = papa.c;
+    brain.mutate(papa.rate);
+    rate = papa.rate*.98;
+    c = color(red(papa.c)+randomGaussian(), green(papa.c)+randomGaussian(), blue(papa.c)+randomGaussian()) ;
+    history = new String[papa.history.length+1];
+    for (int i=0; i<papa.history.length; i++) history[i]=papa.history[i];
+    history[history.length-1] = this.hashCode() + ","+c ;
   }
   void init() {
     x = 50.0;
@@ -27,8 +36,7 @@ class Bird {
     fitness = 0.;
     score = 0;
     rate = .1 ;
-    c = color(random(256),random(256),random(256));
-    alive = true;
+    alive = true ;
   }
   void show() {
     strokeWeight(1);
@@ -55,24 +63,19 @@ class Bird {
     return false;
   }
   void think(PVector[] pipes) {
-    PVector closest = pipes[0];
-    float record = pipes[0].x - x;
-    float diff ;
+    PVector pClosest = pipes[0] ;
     for (int i = 1; i < pipes.length; i++) {
-      diff = pipes[i].x - x;
-      if (diff > 0 && diff < record) {
-        record = diff;
-        closest =  pipes[i];
-      }
+      if ( pipes[i].x < pClosest.x  &&  pipes[i].x > x ) pClosest = pipes[i] ;
     }
+
     // Now create the inputs to the neural network
     Double[] inputs = new Double[8];
     // x position of closest pipe
-    inputs[0] = (double)map(closest.x, x, width, -1, 1);
+    inputs[0] = (double)map(pClosest.x, x, width, -1, 1);
     // top of closest pipe opening
-    inputs[1] = (double)map(closest.y, 0, height, -1, 1);
-    // bottom of closest pipe opening
-    inputs[2] = (double)map(closest.z, 0, height, -1, 1);
+    inputs[1] = (double)map(pClosest.y, 0, height, -1, 1);
+    // height of closest pipe opening
+    inputs[2] = (double)map(pClosest.z, 0, height, -1, 1);
     // bird's y position
     inputs[3] = (double)map(y, 0, height, -1, 1);
     // bird's y velocity
